@@ -22,16 +22,14 @@ def generate_data():
 
 def clean_data(raw_data):
 
-    column_means = np.mean(raw_data, axis=0)
+    raw_data_with_nans = np.where(raw_data<=0, np.nan, raw_data)
 
-    invalid = raw_data <= 0
+    column_means = np.nanmean(raw_data_with_nans, axis=0)
 
-    rows, cols = np.where(invalid)
+    cleaned_data = np.where(np.isnan(raw_data_with_nans), column_means, raw_data)
 
-    raw_data[rows, cols] = column_means[cols]
-
-    min_values = np.min(raw_data, axis=0)
-    max_values = np.max(raw_data, axis=0)
+    min_values = np.min(cleaned_data, axis=0)
+    max_values = np.max(cleaned_data, axis=0)
 
     normalized_data = (raw_data - min_values) / (max_values - min_values)
 
@@ -63,9 +61,6 @@ def check_composite_health_index(data, threshold_low, threshold_high):
     print(critical)
 
     print("\nTotal critical ticks:", len(critical))
-
-
-
 
 
 raw_data = generate_data()
