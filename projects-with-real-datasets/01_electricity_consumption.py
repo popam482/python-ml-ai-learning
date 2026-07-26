@@ -6,6 +6,7 @@ NATIONAL GRID POWER ANALYTICS ENGINE
 - green foot vs fossil to see the energetic transition
 
 """
+import os
 
 import pandas as pd
 
@@ -62,6 +63,21 @@ def seasonal_variation(clean_df):
     monthly_stats = clean_df.groupby('Month')[['Consumption', 'Green Percentage']].mean()
     return monthly_stats
 
+def correlations_analysis(df):
+    columns_of_interest = ['Consumption', 'Total Fossil', 'Total Green', 'Coal', 'Wind']
+    correlation_matrix = df[columns_of_interest].corr()
+
+    return correlation_matrix
+
+def export_results(clean_df, monthly_green_foot, correlation_matrix):
+    if not os.path.exists("../exports"):
+        os.makedirs("../exports")
+    clean_df.to_csv('../exports/energy_cleaned_data.csv', index=False)
+    monthly_green_foot.to_csv('../exports/monthly_green_foot.csv')
+    correlation_matrix.to_csv('../exports/correlation_matrix.csv')
+    print('Files have been exported successfully\n')
+
+
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
@@ -71,7 +87,8 @@ def main():
     clean_df = fossil_foot(clean_df)
     clean_df = green_foot(clean_df)
     monthly_green_foot = seasonal_variation(clean_df)
-    print(monthly_green_foot)
+    correlation_matrix = correlations_analysis(clean_df)
+    export_results(clean_df, monthly_green_foot, correlation_matrix)
 
 if __name__ == '__main__':
     main()
