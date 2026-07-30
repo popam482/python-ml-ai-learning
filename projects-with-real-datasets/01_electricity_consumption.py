@@ -9,12 +9,13 @@ NATIONAL GRID POWER ANALYTICS ENGINE
 import os
 
 import pandas as pd
+from matplotlib import pyplot as plt
 
 
 def read_dataframe():
     df = pd.read_csv('../datasets/electricityConsumptionAndProductioction.csv')
     df['DateTime'] = pd.to_datetime(df['DateTime'])
-    df.set_index('DateTime', inplace=True)
+    #df.set_index('DateTime', inplace=True)
     return df
 
 
@@ -57,17 +58,20 @@ def green_foot(clean_df):
     clean_df['Green Percentage'] = clean_df['Total Green'] / clean_df['Production'] * 100
     return clean_df
 
+
 def seasonal_variation(clean_df):
     clean_df.reset_index(inplace=True)
     clean_df['Month'] = clean_df['DateTime'].dt.month
     monthly_stats = clean_df.groupby('Month')[['Consumption', 'Green Percentage']].mean()
     return monthly_stats
 
+
 def correlations_analysis(df):
     columns_of_interest = ['Consumption', 'Total Fossil', 'Total Green', 'Coal', 'Wind']
     correlation_matrix = df[columns_of_interest].corr()
 
     return correlation_matrix
+
 
 def export_results(clean_df, monthly_green_foot, correlation_matrix):
     if not os.path.exists("../exports"):
@@ -76,6 +80,150 @@ def export_results(clean_df, monthly_green_foot, correlation_matrix):
     monthly_green_foot.to_csv('../exports/monthly_green_foot.csv')
     correlation_matrix.to_csv('../exports/correlation_matrix.csv')
     print('Files have been exported successfully\n')
+
+
+def hourly_energy_profile(ax, df):
+    hourly_mean = df.groupby(df['DateTime'].dt.hour)[['Consumption', 'Production', 'Net Balance']].mean()
+
+    ax.plot(hourly_mean.index,
+            hourly_mean['Consumption'],
+            color='red',
+            label='Consumption')
+
+    ax.plot(hourly_mean.index,
+            hourly_mean['Production'],
+            color='blue',
+            label='Production')
+
+    ax2 = ax.twinx()
+
+    ax2.plot(hourly_mean.index,
+             hourly_mean['Net Balance'],
+             color='green',
+             linestyle='--',
+             label='Net Balance')
+
+    peak_hour = hourly_mean['Consumption'].idxmax()
+    peak_value = hourly_mean['Consumption'].max()
+
+    ax.annotate(f'Peak hour',
+                xy=(peak_hour, peak_value),
+                xytext=(peak_hour + 0.5, peak_value + 0.5),
+                arrowprops=dict(facecolor='red', width=2, headwidth=5),
+                fontsize=10)
+
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+
+    ax.legend(lines1 + lines2, labels1 + labels2)
+
+    ax.grid(alpha=0.3)
+    ax.set_title("Hourly Energy Profile & Net Balance")
+
+
+def monthly_energy_generation_mix(ax, df):
+    monthly_mean = df.groupby(df['Month'])[['Total Green', 'Total Fossil', 'Nuclear']].mean()
+
+    months = monthly_mean.index
+
+    green = monthly_mean['Total Green']
+    nuclear = monthly_mean['Nuclear']
+    fossil = monthly_mean['Total Fossil']
+
+    ax.bar(
+        months,
+        green,
+        color='green',
+        label='Total Green'
+    )
+
+    ax.bar(
+        months,
+        nuclear,
+        bottom = green,
+        color='orange',
+        label='Total Nuclear'
+    )
+
+    ax.bar(
+        months,
+        fossil,
+        bottom = green + nuclear,
+        color='black',
+        label='Total Fossil'
+    )
+
+    ax.set_xticks(months)
+
+    ax.set_xticklabels([
+        'Jan', 'Feb', 'Mar', 'Apr',
+        'May', 'Jun', 'Jul', 'Aug',
+        'Sep', 'Oct', 'Nov', 'Dec'
+    ])
+
+    ax.set_title('Monthly Energy Generation Mix (MW)')
+    ax.legend()
+
+
+def green_energy_percentage_distribution(ax, df):
+    box_data = []
+    for month in range(1, 13):
+        values = df[df['Month'] == month]['Green Percentage']
+        box_data.append(values)
+
+    bp = ax.boxplot(box_data, patch_artist=True)
+
+    for box in bp['boxes']:
+        box.set_facecolor('green')
+
+    for median in bp['medians']:
+        median.set_color('red')
+        median.set_linewidth(2)
+
+    ax.set_xticks(range(1, 13))
+
+    ax.set_xticklabels([
+        'Jan','Feb','Mar','Apr',
+        'May','Jun','Jul','Aug',
+        'Sep','Oct','Nov','Dec'
+    ])
+
+    ax.set_ylabel('Green Energy (%)')
+    ax.set_title('Green Energy Percentage Distribution by Month')
+
+def thermal_dep_total_demand(ax, df):
+    consumption = df['Consumption']
+    fossil = df['Total Fossil']
+    green_percentage = df['Green Percentage']
+    scatter = ax.scatter(consumption, fossil, c=green_percentage, s=5, cmap='RdYlGn', alpha=0.6,
+                         edgecolors='black', linewidths=1)
+    plt.colorbar(scatter, ax=ax)
+    ax.set_xlabel("Consumption")
+    ax.set_ylabel("Total Fossil")
+    ax.set_title("Thermal Dependency vs. Total Demand")
+
+def save_chart(fig):
+    fig.savefig('../exports/energy_analytics_dashboard.png', dpi=300)
+
+
+# 2x2 subplots saved as energy_analysis_dashboard.png in /exports (300 DPI)
+def generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix):
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(16, 10))
+    hourly_energy_profile(axes[0, 0], clean_df)
+    monthly_energy_generation_mix(axes[0, 1], clean_df)
+    green_energy_percentage_distribution(axes[1, 0], clean_df)
+    thermal_dep_total_demand(axes[1, 1], clean_df)
+
+    for ax in axes.flat:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+    plt.suptitle('NATIONAL GRID POWER ANALYSIS ENGINE - EXECUTIVE DASHBOARD', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+
+    save_chart(fig)
+
+    plt.show()
 
 
 def main():
@@ -89,6 +237,8 @@ def main():
     monthly_green_foot = seasonal_variation(clean_df)
     correlation_matrix = correlations_analysis(clean_df)
     export_results(clean_df, monthly_green_foot, correlation_matrix)
+    generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
+
 
 if __name__ == '__main__':
     main()
