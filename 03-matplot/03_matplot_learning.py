@@ -7,7 +7,7 @@ motor_temperature = [20, 65, 85, 88, 90, 89]
 # plt.plot(minutes, motor_temperature)
 
 plt.plot(minutes, motor_temperature, color='green', marker='o', linestyle='--')
-plt.plot('Car motor temperature')
+plt.title('Car motor temperature')
 plt.xlabel('Time')
 plt.ylabel('Temperature(C)')
 plt.grid(True)
@@ -92,7 +92,7 @@ bar_width = 0.35
 
 fig, ax = plt.subplots(figsize=(10, 6))
 
-ax.bar(x_indices - bar_width / 2, cpu_execution_time, label='CPU time', color='pink')
+ax.bar((x_indices - bar_width) / 2, cpu_execution_time, label='CPU time', color='pink')
 ax.bar((x_indices + bar_width) / 2, io_execution_time, label='IO time', color='purple')
 
 ax.set_xticks(x_indices)
