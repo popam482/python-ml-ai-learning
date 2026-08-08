@@ -248,7 +248,7 @@ def train_energy_model(clean_df):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
 
     #model training
-    regressor = RandomForestRegressor(n_estimators=10000, n_jobs=-1, random_state=42)
+    regressor = RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=42)
     regressor.fit(X_train, y_train)
 
     #prediction on test data
@@ -261,6 +261,12 @@ def train_energy_model(clean_df):
 
     return regressor
 
+def feature_importance(regression):
+    print('\n --- FEATURE IMPORTANCE ---')
+    importances = regression.feature_importances_
+    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    for col, imp in sorted(zip(feature_cols, importances), key=lambda x: x[1], reverse=True):
+        print(f"Impact {col}: {imp *100 :.2f}%")
 
 def main():
     df = read_dataframe()
@@ -274,7 +280,8 @@ def main():
     correlation_matrix = correlations_analysis(clean_df)
     export_results(clean_df, monthly_green_foot, correlation_matrix)
     generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
-    train_energy_model(clean_df)
+    regression = train_energy_model(clean_df)
+    feature_importance(regression)
 
 
 if __name__ == '__main__':
