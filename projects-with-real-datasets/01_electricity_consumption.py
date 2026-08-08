@@ -10,12 +10,16 @@ import os
 
 import pandas as pd
 from matplotlib import pyplot as plt
+import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
 
 
 def read_dataframe():
     df = pd.read_csv('../datasets/electricityConsumptionAndProductioction.csv')
     df['DateTime'] = pd.to_datetime(df['DateTime'])
-    #df.set_index('DateTime', inplace=True)
+    # df.set_index('DateTime', inplace=True)
     return df
 
 
@@ -140,7 +144,7 @@ def monthly_energy_generation_mix(ax, df):
     ax.bar(
         months,
         nuclear,
-        bottom = green,
+        bottom=green,
         color='orange',
         label='Total Nuclear'
     )
@@ -148,7 +152,7 @@ def monthly_energy_generation_mix(ax, df):
     ax.bar(
         months,
         fossil,
-        bottom = green + nuclear,
+        bottom=green + nuclear,
         color='black',
         label='Total Fossil'
     )
@@ -183,13 +187,14 @@ def green_energy_percentage_distribution(ax, df):
     ax.set_xticks(range(1, 13))
 
     ax.set_xticklabels([
-        'Jan','Feb','Mar','Apr',
-        'May','Jun','Jul','Aug',
-        'Sep','Oct','Nov','Dec'
+        'Jan', 'Feb', 'Mar', 'Apr',
+        'May', 'Jun', 'Jul', 'Aug',
+        'Sep', 'Oct', 'Nov', 'Dec'
     ])
 
     ax.set_ylabel('Green Energy (%)')
     ax.set_title('Green Energy Percentage Distribution by Month')
+
 
 def thermal_dep_total_demand(ax, df):
     consumption = df['Consumption']
@@ -201,6 +206,7 @@ def thermal_dep_total_demand(ax, df):
     ax.set_xlabel("Consumption")
     ax.set_ylabel("Total Fossil")
     ax.set_title("Thermal Dependency vs. Total Demand")
+
 
 def save_chart(fig):
     fig.savefig('../exports/energy_analytics_dashboard.png', dpi=300)
@@ -226,6 +232,36 @@ def generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix):
     plt.show()
 
 
+def train_energy_model(clean_df):
+    df_ml = clean_df.copy()
+
+    df_ml['Hour'] = df_ml['DateTime'].dt.hour
+    df_ml['Day'] = df_ml['DateTime'].dt.dayofweek
+    df_ml['Month'] = df_ml['DateTime'].dt.month
+
+    #define features and target
+    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    X = df_ml[feature_cols]
+    y = df_ml['Consumption']
+
+    #split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
+
+    #model training
+    regressor = RandomForestRegressor(n_estimators=10000, n_jobs=-1, random_state=42)
+    regressor.fit(X_train, y_train)
+
+    #prediction on test data
+    y_pred = regressor.predict(X_test)
+
+    #evaluation
+    mae = mean_absolute_error(y_test, y_pred)
+    print(f'\n --- ML MODEL RESULTS --- ')
+    print(f'MAE: {mae:.2f} MW')
+
+    return regressor
+
+
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
@@ -238,6 +274,7 @@ def main():
     correlation_matrix = correlations_analysis(clean_df)
     export_results(clean_df, monthly_green_foot, correlation_matrix)
     generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
+    train_energy_model(clean_df)
 
 
 if __name__ == '__main__':
