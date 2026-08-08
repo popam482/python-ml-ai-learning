@@ -14,6 +14,8 @@ import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 def read_dataframe():
@@ -296,6 +298,44 @@ def real_predicted_consumption_plot(y_test, y_pred):
     plt.tight_layout()
     plt.show()
 
+
+
+def train_energy_pipeline(clean_df):
+    df_ml = clean_df.copy()
+
+    df_ml['Hour'] = df_ml['DateTime'].dt.hour
+    df_ml['Day'] = df_ml['DateTime'].dt.dayofweek
+    df_ml['Month'] = df_ml['DateTime'].dt.month
+
+    #define features and target
+    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    X = df_ml[feature_cols]
+    y = df_ml['Consumption']
+
+    #split the data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
+
+    #create the pipeline
+    energy_pipeline = Pipeline([
+        ('scaler', StandardScaler()), #scale
+        ('regressor', RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=42)) #model
+    ])
+
+    #traning using the pipeline
+    energy_pipeline.fit(X_train, y_train)
+
+    #prediction
+    y_pred = energy_pipeline.predict(X_test)
+
+    #evaluation
+    mae = mean_absolute_error(y_test, y_pred)
+    print(f"\n--- PIPELINE MODEL RESULTS ---")
+    print(f"Pipeline MAE: {mae:.2f} MW")
+
+    return energy_pipeline
+
+
+
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
@@ -312,6 +352,7 @@ def main():
     feature_importance(regression)
     scenario_prediction(regression)
     real_predicted_consumption_plot(y_test, y_pred)
+    train_energy_pipeline(clean_df)
 
 
 if __name__ == '__main__':
