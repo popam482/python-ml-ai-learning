@@ -259,7 +259,7 @@ def train_energy_model(clean_df):
     print(f'\n --- ML MODEL RESULTS --- ')
     print(f'MAE: {mae:.2f} MW')
 
-    return regressor
+    return regressor, y_test, y_pred
 
 def feature_importance(regression):
     print('\n --- FEATURE IMPORTANCE ---')
@@ -275,7 +275,7 @@ def scenario_prediction(regressor):
         'Nuclear': 700,
         'Total Fossil': 1500,
         'Hour': 14,
-        'Day': 8,
+        'Day': 5,
         'Month': 8,
     }
     ])
@@ -284,6 +284,17 @@ def scenario_prediction(regressor):
     print(f'\n --- FUTURE PREDICTION ---')
     print(f'Prognosed Consumption Scenario: {prognosed_scenario}')
 
+def real_predicted_consumption_plot(y_test, y_pred):
+    plt.figure(figsize=(14, 5))
+    plt.plot(y_test.values[:150], label='Real consumption', color='red', linewidth=2)
+    plt.plot(y_pred[:150], label='Predicted consumption', color='blue', linestyle='--', linewidth=2)
+    plt.title('National Grid: Real consumption vs. Model Prediction')
+    plt.xlabel('Hours in dataset')
+    plt.ylabel('Consumption (MW)')
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.show()
 
 def main():
     df = read_dataframe()
@@ -297,9 +308,10 @@ def main():
     correlation_matrix = correlations_analysis(clean_df)
     export_results(clean_df, monthly_green_foot, correlation_matrix)
     generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
-    regression = train_energy_model(clean_df)
+    regression, y_test, y_pred = train_energy_model(clean_df)
     feature_importance(regression)
     scenario_prediction(regression)
+    real_predicted_consumption_plot(y_test, y_pred)
 
 
 if __name__ == '__main__':
