@@ -268,6 +268,23 @@ def feature_importance(regression):
     for col, imp in sorted(zip(feature_cols, importances), key=lambda x: x[1], reverse=True):
         print(f"Impact {col}: {imp *100 :.2f}%")
 
+
+def scenario_prediction(regressor):
+    future_scenario = pd.DataFrame([{
+        'Total Green': 400,
+        'Nuclear': 700,
+        'Total Fossil': 1500,
+        'Hour': 14,
+        'Day': 8,
+        'Month': 8,
+    }
+    ])
+
+    prognosed_scenario = regressor.predict(future_scenario)[0]
+    print(f'\n --- FUTURE PREDICTION ---')
+    print(f'Prognosed Consumption Scenario: {prognosed_scenario}')
+
+
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
@@ -282,6 +299,7 @@ def main():
     generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
     regression = train_energy_model(clean_df)
     feature_importance(regression)
+    scenario_prediction(regression)
 
 
 if __name__ == '__main__':
