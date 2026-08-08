@@ -16,6 +16,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+import joblib
 
 
 def read_dataframe():
@@ -334,6 +335,18 @@ def train_energy_pipeline(clean_df):
 
     return energy_pipeline
 
+def save_energy_model(model, filepath='../exports/energy_model.joblib'):
+    if not os.path.exists("../exports"):
+        os.makedirs("../exports")
+
+    joblib.dump(model, filepath)
+    print(f"\n Model successfully saved to {filepath}")
+
+def load_and_predict(filepath, new_data_df):
+    loaded_model = joblib.load(filepath)
+    prediction = loaded_model.predict(new_data_df)
+    return prediction
+
 
 
 def main():
@@ -352,7 +365,19 @@ def main():
     feature_importance(regression)
     scenario_prediction(regression)
     real_predicted_consumption_plot(y_test, y_pred)
-    train_energy_pipeline(clean_df)
+    pipeline = train_energy_pipeline(clean_df)
+    save_energy_model(pipeline)
+    scenario = pd.DataFrame([{
+        'Total Green': 100,
+        'Nuclear': 700,
+        'Total Fossil': 1500,
+        'Hour': 20,
+        'Day': 6,
+        'Month': 9,
+    }])
+
+    prognosed_consumption = load_and_predict('../exports/energy_model.joblib', scenario)
+    print(f'\n Prognosed Consumption Scenario: {prognosed_consumption}')
 
 
 if __name__ == '__main__':

@@ -6,3 +6,6 @@ __pycache__/
 *.pkl
 *.pt
 *.h5
+exports/*.joblib
+exports/*.pkl
+exports/*.pickle
