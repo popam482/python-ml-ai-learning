@@ -8,12 +8,13 @@ NATIONAL GRID POWER ANALYTICS ENGINE
 """
 import os
 
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import joblib
@@ -347,6 +348,52 @@ def load_and_predict(filepath, new_data_df):
     prediction = loaded_model.predict(new_data_df)
     return prediction
 
+def cross_validate_energy_model(clean_df):
+    df_ml = clean_df.copy()
+    df_ml['Hour'] = df_ml['DateTime'].dt.hour
+    df_ml['Day'] = df_ml['DateTime'].dt.dayofweek
+    df_ml['Month'] = df_ml['DateTime'].dt.month
+
+    feature_cols = [
+        'Total Green',
+        'Nuclear',
+        'Total Fossil',
+        'Hour',
+        'Day',
+        'Month'
+    ]
+
+    X = df_ml[feature_cols]
+    y = df_ml['Consumption']
+
+    # temporal split
+    tscv = TimeSeriesSplit(n_splits=5)
+
+    energy_pipeline = Pipeline([
+        ('scaler', StandardScaler()),
+        (
+            'regressor',
+            RandomForestRegressor(n_estimators=100, n_jobs=-1, random_state=42)
+        )
+    ])
+
+    scores = cross_val_score(
+        energy_pipeline,
+        X,
+        y,
+        cv=tscv,
+        scoring='neg_mean_absolute_error',
+        n_jobs=-1,
+    )
+
+    mae_scores = -scores
+    print('\n ---TIME SERIES CROSS-VALIDATION---')
+    for i, score in enumerate(mae_scores, 1):
+        print(f'Fold {i} MAE: {score:.2f} MW')
+
+    print(
+        f'Average MAE: {np.mean(mae_scores):.2f} MW (± {np.std(mae_scores):.2f} MW)'
+    )
 
 
 def main():
@@ -378,6 +425,8 @@ def main():
 
     prognosed_consumption = load_and_predict('../exports/energy_model.joblib', scenario)
     print(f'\n Prognosed Consumption Scenario: {prognosed_consumption}')
+
+    cross_validate_energy_model(clean_df)
 
 
 if __name__ == '__main__':
