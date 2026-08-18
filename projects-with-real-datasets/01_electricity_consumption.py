@@ -244,7 +244,17 @@ def train_energy_model(clean_df):
     df_ml['Month'] = df_ml['DateTime'].dt.month
 
     #define features and target
-    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    feature_cols = [
+        'Total Green',
+        'Nuclear',
+        'Total Fossil',
+        'Hour',
+        'Day',
+        'Month',
+        'Consumption_Lag_1h',
+        'Consumption_Lag_24h',
+        'Consumption_Rolling_24h'
+    ]
     X = df_ml[feature_cols]
     y = df_ml['Consumption']
 
@@ -268,7 +278,17 @@ def train_energy_model(clean_df):
 def feature_importance(regression):
     print('\n --- FEATURE IMPORTANCE ---')
     importances = regression.feature_importances_
-    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    feature_cols = [
+        'Total Green',
+        'Nuclear',
+        'Total Fossil',
+        'Hour',
+        'Day',
+        'Month',
+        'Consumption_Lag_1h',
+        'Consumption_Lag_24h',
+        'Consumption_Rolling_24h'
+    ]
     for col, imp in sorted(zip(feature_cols, importances), key=lambda x: x[1], reverse=True):
         print(f"Impact {col}: {imp *100 :.2f}%")
 
@@ -281,6 +301,9 @@ def scenario_prediction(regressor):
         'Hour': 14,
         'Day': 5,
         'Month': 8,
+        'Consumption_Lag_1h': 6200,
+        'Consumption_Lag_24h': 6000,
+        'Consumption_Rolling_24h': 6100
     }
     ])
 
@@ -310,7 +333,17 @@ def train_energy_pipeline(clean_df):
     df_ml['Month'] = df_ml['DateTime'].dt.month
 
     #define features and target
-    feature_cols = ['Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month']
+    feature_cols = [
+        'Total Green',
+        'Nuclear',
+        'Total Fossil',
+        'Hour',
+        'Day',
+        'Month',
+        'Consumption_Lag_1h',
+        'Consumption_Lag_24h',
+        'Consumption_Rolling_24h'
+    ]
     X = df_ml[feature_cols]
     y = df_ml['Consumption']
 
@@ -360,7 +393,10 @@ def cross_validate_energy_model(clean_df):
         'Total Fossil',
         'Hour',
         'Day',
-        'Month'
+        'Month',
+        'Consumption_Lag_1h',
+        'Consumption_Lag_24h',
+        'Consumption_Rolling_24h'
     ]
 
     X = df_ml[feature_cols]
@@ -395,24 +431,46 @@ def cross_validate_energy_model(clean_df):
         f'Average MAE: {np.mean(mae_scores):.2f} MW (± {np.std(mae_scores):.2f} MW)'
     )
 
+def add_time_series_features(clean_df):
+    df_feat = clean_df.copy()
+
+    df_feat['Hour'] = df_feat['DateTime'].dt.hour
+    df_feat['Day'] = df_feat['DateTime'].dt.dayofweek
+    df_feat['Month'] = df_feat['DateTime'].dt.month
+
+    df_feat['Consumption_Lag_1h'] = df_feat['Consumption'].shift(1)
+    df_feat['Consumption_Lag_24h'] = df_feat['Consumption'].shift(24)
+
+    df_feat['Consumption_Rolling_24h'] = (
+        df_feat['Consumption'].rolling(window=24).mean()
+    )
+
+    df_feat = df_feat.dropna().reset_index(drop=True)
+
+    return df_feat
 
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
     clean_df = calculate_net_balance(clean_df)
-    calculate_highest_deficit(clean_df)
-    calculate_highest_surplus(clean_df)
+
     clean_df = fossil_foot(clean_df)
     clean_df = green_foot(clean_df)
+
+    df_feat = add_time_series_features(clean_df)
+
+    calculate_highest_deficit(clean_df)
+    calculate_highest_surplus(clean_df)
     monthly_green_foot = seasonal_variation(clean_df)
     correlation_matrix = correlations_analysis(clean_df)
     export_results(clean_df, monthly_green_foot, correlation_matrix)
     generate_visual_dashboard(clean_df, monthly_green_foot, correlation_matrix)
-    regression, y_test, y_pred = train_energy_model(clean_df)
+
+    regression, y_test, y_pred = train_energy_model(df_feat)
     feature_importance(regression)
     scenario_prediction(regression)
     real_predicted_consumption_plot(y_test, y_pred)
-    pipeline = train_energy_pipeline(clean_df)
+    pipeline = train_energy_pipeline(df_feat)
     save_energy_model(pipeline)
     scenario = pd.DataFrame([{
         'Total Green': 100,
@@ -421,12 +479,15 @@ def main():
         'Hour': 20,
         'Day': 6,
         'Month': 9,
+        'Consumption_Lag_1h': 6200,
+        'Consumption_Lag_24h': 6000,
+        'Consumption_Rolling_24h': 6100
     }])
 
     prognosed_consumption = load_and_predict('../exports/energy_model.joblib', scenario)
     print(f'\n Prognosed Consumption Scenario: {prognosed_consumption}')
 
-    cross_validate_energy_model(clean_df)
+    cross_validate_energy_model(df_feat)
 
 
 if __name__ == '__main__':
