@@ -12,9 +12,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import pandas as pd
+from scipy.stats import uniform, randint
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score
+from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingRegressor
@@ -452,7 +453,7 @@ def add_time_series_features(clean_df):
     return df_feat
 
 def train_gradient_boosting(X_train, X_test, y_train, y_test):
-    gradient = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+    gradient = GradientBoostingRegressor(n_estimators=200, learning_rate=0.05, max_depth=5, random_state=42)
     gradient.fit(X_train, y_train)
 
     y_pred = gradient.predict(X_test)
@@ -480,6 +481,38 @@ def call_gradient_boosting(df_feat):
 
     gb_model, gb_mae = train_gradient_boosting(X_train, X_test, y_train, y_test)
 
+    best_gb_model = tune_gradient_boosting(X, y)
+
+    print(f"Best gb model: {best_gb_model}")
+
+
+def tune_gradient_boosting(X, y):
+    param = {
+        'n_estimators': randint(50, 250),
+        'learning_rate': uniform(0.01, 0.1),
+        'max_depth': randint(3, 10),
+        'subsample': uniform(0.7, 0.3),
+    }
+
+    tscv = TimeSeriesSplit(n_splits=3)
+
+    random_search = RandomizedSearchCV(
+        estimator=GradientBoostingRegressor(random_state=42),
+        param_distributions=param,
+        n_iter=10,
+        cv=tscv,
+        scoring='neg_mean_absolute_error',
+        random_state=42,
+        n_jobs=-1
+    )
+
+    random_search.fit(X, y)
+
+    print("\n --- HYPERPARAMETER TUNING ---")
+    print(f"Best settings found: {random_search.best_params_}")
+    print(f"Best MAE found: {random_search.best_score_:.02f} MW")
+
+    return random_search.best_estimator_
 
 def main():
     df = read_dataframe()
