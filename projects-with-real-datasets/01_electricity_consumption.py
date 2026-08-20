@@ -17,6 +17,8 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split, TimeSeriesSplit, cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error
 import joblib
 
 
@@ -449,6 +451,36 @@ def add_time_series_features(clean_df):
 
     return df_feat
 
+def train_gradient_boosting(X_train, X_test, y_train, y_test):
+    gradient = GradientBoostingRegressor(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=42)
+    gradient.fit(X_train, y_train)
+
+    y_pred = gradient.predict(X_test)
+    mae = mean_absolute_error(y_test, gradient.predict(X_test))
+
+    print(f"\n--- GRADIENT BOOSTING RESULTS ---")
+    print(f"Grafient boosting MAE: {mae:.2f} MW")
+
+    return gradient, mae
+
+
+def call_gradient_boosting(df_feat):
+    feature_cols = [
+        'Total Green', 'Nuclear', 'Total Fossil', 'Hour', 'Day', 'Month',
+        'Consumption_Lag_1h', 'Consumption_Lag_24h', 'Consumption_Rolling_24h'
+    ]
+    X = df_feat[feature_cols]
+    y = df_feat['Consumption']
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, shuffle=False
+    )
+
+    regression, y_test, y_pred = train_energy_model(df_feat)
+
+    gb_model, gb_mae = train_gradient_boosting(X_train, X_test, y_train, y_test)
+
+
 def main():
     df = read_dataframe()
     clean_df = clear_data(df)
@@ -476,9 +508,9 @@ def main():
         'Total Green': 100,
         'Nuclear': 700,
         'Total Fossil': 1500,
-        'Hour': 20,
-        'Day': 6,
-        'Month': 9,
+        'Hour': 21,
+        'Day': 2,
+        'Month': 8,
         'Consumption_Lag_1h': 6200,
         'Consumption_Lag_24h': 6000,
         'Consumption_Rolling_24h': 6100
@@ -488,6 +520,8 @@ def main():
     print(f'\n Prognosed Consumption Scenario: {prognosed_consumption}')
 
     cross_validate_energy_model(df_feat)
+    
+    call_gradient_boosting(df_feat)
 
 
 if __name__ == '__main__':
