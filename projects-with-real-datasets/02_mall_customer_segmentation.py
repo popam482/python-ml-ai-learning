@@ -1,6 +1,7 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import (StandardScaler)
+from sklearn.cluster import KMeans
 
 def read_data():
     df = pd.read_csv("../datasets/Mall_Customers.csv")
@@ -12,10 +13,32 @@ def data_scaling(df):
     scaled_data = scaler.fit_transform(features)
     return scaled_data
 
+def elbow_plot(inertia):
+    plt.plot(range(1, 10), inertia, marker='o')
+    plt.title('Elbow plot to determine K')
+    plt.xlabel('Number of clusters - K')
+    plt.ylabel('Inertia')
+    plt.show()
+
+
+def find_optimal_number_of_clusters(scaled_data):
+    inertia = []
+    for k in range(1, 10):
+        model_kmeans = KMeans(n_clusters=k, random_state=42)
+
+        model_kmeans.fit(scaled_data)
+
+        inertia.append(model_kmeans.inertia_)
+
+    elbow_plot(inertia)
+
+
+
 def main():
     df = read_data()
     scaled_data = data_scaling(df)
     print(scaled_data)
+    find_optimal_number_of_clusters(scaled_data)
 
 if __name__ == "__main__":
     main()
