@@ -80,6 +80,14 @@ def apply_pca(scaled_data, cluster_ids):
 
     pca_plot(pca_data, cluster_ids)
 
+def cluster_profiling(df):
+    profile = df.groupby('cluster_ID')[
+        ['Age', 'Annual Income (k$)', 'Spending Score (1-100)']
+    ].mean()
+
+    print(profile)
+
+    return profile
 
 def main():
     df = read_data()
@@ -90,6 +98,7 @@ def main():
     k_value = 4
     cluster_ids = add_tag_to_df(df, scaled_data, k_value)
     apply_pca(scaled_data, cluster_ids)
+    cluster_profiling(df)
 
 if __name__ == "__main__":
     main()
