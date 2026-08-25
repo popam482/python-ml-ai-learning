@@ -32,6 +32,10 @@ def find_optimal_number_of_clusters(scaled_data):
 
     elbow_plot(inertia)
 
+def k_means_training(scaled_data, k_value):
+    km = KMeans(n_clusters=k_value, random_state=42)
+    return km.fit_predict(scaled_data)
+
 
 
 def main():
@@ -39,6 +43,10 @@ def main():
     scaled_data = data_scaling(df)
     print(scaled_data)
     find_optimal_number_of_clusters(scaled_data)
+    # after observing the plot: 4
+    k_value = 4
+    prediction = k_means_training(scaled_data, k_value)
+    print(prediction)
 
 if __name__ == "__main__":
     main()
