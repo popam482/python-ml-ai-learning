@@ -85,10 +85,36 @@ def cluster_profiling(df):
         ['Age', 'Annual Income (k$)', 'Spending Score (1-100)']
     ].mean()
 
-    print(profile)
+    global_means = df[
+        ['Age', 'Annual Income (k$)', 'Spending Score (1-100)']
+    ].mean()
+
+    def create_profile(row):
+        age = 'Young' if row['Age'] < global_means['Age'] else 'Old'
+
+        income = (
+            'Low income'
+            if row['Annual Income (k$)'] < global_means['Annual Income (k$)']
+            else 'High income'
+        )
+
+        spending = (
+            'High spender'
+            if row['Spending Score (1-100)'] >= global_means['Spending Score (1-100)']
+            else 'Low spender'
+        )
+
+        return f'{age}, {income}, {spending}'
+
+    profile['Marketing Profile'] = profile.apply(
+        create_profile,
+        axis=1
+    )
 
     return profile
 
+
+    return profile
 def main():
     df = read_data()
     scaled_data = data_scaling(df)
@@ -98,7 +124,9 @@ def main():
     k_value = 4
     cluster_ids = add_tag_to_df(df, scaled_data, k_value)
     apply_pca(scaled_data, cluster_ids)
-    cluster_profiling(df)
+    profile = cluster_profiling(df)
+
+    print(profile)
 
 if __name__ == "__main__":
     main()
